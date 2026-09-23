@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Stock {
+  id        String   @id @default(uuid())
+  symbol    String   @unique
+  name      String
+  exchange  String
+  country   String?
+  sector    String?
+  industry  String?
+  currency  String?
+  assetType String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dailyStates DailyStockState[]
+  events      MarketEvent[]
+  snapshots   QuoteSnapshot[]
+}
+
+model DailyStockState {
+  id                  String   @id @default(uuid())
+  stockId             String
+  stock               Stock    @relation(fields: [stockId], references: [id])
+  tradingDate         String   // YYYY-MM-DD
+  previous52WeekHigh  Float?
+  previous52WeekLow   Float?
+  current52WeekHigh   Float?
+  current52WeekLow    Float?
+  lastPrice           Float?
+  previousPrice       Float?
+  averageVolume       Float?   // Add average volume for RVOL calculation
+  lastQuoteAt         DateTime?
+  highTriggered       Boolean  @default(false)
+  lowTriggered        Boolean  @default(false)
+  highCurrentlyBroken Boolean  @default(false)
+  lowCurrentlyBroken  Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([stockId, tradingDate])
+}
+
+model MarketEvent {
+  id                   String   @id @default(uuid())
+  stockId              String
+  stock                Stock    @relation(fields: [stockId], references: [id])
+  tradingDate          String   // YYYY-MM-DD
+  eventType            String   // HIGH or LOW
+  price                Float
+  reference52WeekPrice Float
+  distanceFromBoundary Float
+  percentFromBoundary  Float
+  timestamp            DateTime
+  source               String?
+  createdAt            DateTime @default(now())
+
+  @@index([tradingDate])
+  @@index([eventType])
+  @@index([timestamp])
+  @@index([stockId])
+}
+
+model QuoteSnapshot {
+  id        String   @id @default(uuid())
+  stockId   String
+  stock     Stock    @relation(fields: [stockId], references: [id])
+  price     Float
+  volume    Float?
+  timestamp DateTime
+}
